@@ -5,180 +5,227 @@
     android:viewportWidth="200"
     android:viewportHeight="200">
 
-    <!-- 1. Outer Dark Pentagon Border -->
+    <!-- 1. Outer Crest Shield Base - Modern Deep Forest Charcoal tone -->
     <path
-        android:fillColor="#121814"
-        android:strokeColor="#121814"
-        android:strokeWidth="1"
-        android:pathData="M100,5 C148,5 192,42 192,86 C192,120 178,154 153,191 C151,194 147,194 144,194 L56,194 C53,194 49,194 47,191 C22,154 8,120 8,86 C8,42 52,5 100,5 Z" />
+        android:fillColor="#061F12"
+        android:pathData="M 100,5 L 180,35 C 188,44 191,66 191,88 C 191,126 158,162 100,195 C 42,162 9,126 9,88 C 9,66 12,44 20,35 Z" />
 
-    <!-- 2. Medium White Outline Shield Inside -->
+    <!-- 2. Mid Shield Border Accent - Active Emerald/Mint glow -->
     <path
-        android:fillColor="#FFFFFF"
-        android:pathData="M100,9 C144,9 186,44 186,86 C186,118 172,151 148,188 C147,190 144,190 142,190 L58,190 C56,190 53,190 52,188 C28,151 14,118 14,86 C14,44 56,9 100,9 Z" />
+        android:fillColor="#10B981"
+        android:pathData="M 100,9 L 175,38 C 182,46.5 185,67 185,88 C 185,123 154,156 100,189 C 46,156 15,123 15,88 C 15,67 18,46.5 25,38 Z" />
 
-    <!-- 3. Primary Inner Bright Green Shield (Matching the school green backdrop) -->
+    <!-- 3. Inner Content Canvas - Pristine Soft Mint White (gives high modern contrast) -->
     <path
-        android:fillColor="#2EE069"
-        android:pathData="M100,12 C141,12 181,46 181,86 C181,116 168,148 145,185 C144,187 141,187 139,187 L61,187 C59,187 56,187 55,185 C32,148 19,116 19,86 C19,46 59,12 100,12 Z" />
+        android:fillColor="#F0FDF4"
+        android:pathData="M 100,14 L 171,41 C 177,49 179.5,67.5 179.5,87.5 C 179.5,120 150,152 100,183.5 C 50,152 20.5,120 20.5,87.5 C 20.5,67.5 23,49 29,41 Z" />
 
-    <!-- 4. Inner Dark Accent Ring Inside the Green Border -->
+    <!-- 4. Inner Fine Guide-Path (Adding subtle double-border precision) -->
     <path
-        android:strokeColor="#1E5C2D"
-        android:strokeWidth="1.5"
-        android:pathData="M100,20 C135,20 169,50 169,86 C169,112 157,140 137,173 L63,173 C43,140 31,112 31,86 C31,50 65,20 100,20 Z" />
+        android:strokeColor="#86EFAC"
+        android:strokeWidth="1.2"
+        android:pathData="M 100,18 L 166,43 C 171,51 173,68 173,87 C 173,116 146,146 100,176 C 54,146 27,116 27,87 C 27,68 29,51 34,43 Z" />
 
-    <!-- 5. Wings (Left side & Right side - White Wings flanking the center) -->
-    <!-- Left Wing Feathers -->
+    <!-- 5. Modernized Left Wing Feathers (Deep Green Accent & Crisp White Fills) -->
     <path
         android:fillColor="#FFFFFF"
-        android:strokeColor="#121814"
-        android:strokeWidth="1"
-        android:pathData="M81,139 C50,131 38,109 38,78 C38,103 52,126 76,142 Z" />
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 46,62 C 31,67 24,92 34,117 C 40,127 49,134 56,138 C 50,122 48,97 54,77 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:strokeColor="#121814"
-        android:strokeWidth="1"
-        android:pathData="M84,144 C56,138 41,118 41,91 C41,112 56,134 78,148 Z" />
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 48,82 C 36,87 30,107 38,127 C 44,135 52,141 58,145 C 54,130 53,107 56,92 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:strokeColor="#121814"
-        android:strokeWidth="1"
-        android:pathData="M87,150 C62,146 45,128 45,103 C45,121 59,141 81,153 Z" />
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 50,102 C 41,105 36,120 42,137 C 47,144 55,149 61,152 C 57,140 56,120 58,110 Z" />
 
-    <!-- Right Wing Feathers -->
+    <!-- 6. Modernized Right Wing Feathers (Deep Green Accent & Crisp White Fills) -->
     <path
         android:fillColor="#FFFFFF"
-        android:strokeColor="#121814"
-        android:strokeWidth="1"
-        android:pathData="M119,139 C150,131 162,109 162,78 C162,103 148,126 124,142 Z" />
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 154,62 C 169,67 176,92 166,117 C 160,127 151,134 144,138 C 150,122 152,97 146,77 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:strokeColor="#121814"
-        android:strokeWidth="1"
-        android:pathData="M116,144 C144,138 159,118 159,91 C159,112 144,134 122,148 Z" />
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 152,82 C 164,87 170,107 162,127 C 156,135 148,141 142,145 C 146,130 147,107 144,92 Z" />
     <path
         android:fillColor="#FFFFFF"
-        android:strokeColor="#121814"
-        android:strokeWidth="1"
-        android:pathData="M113,150 C138,146 155,128 155,103 C155,121 141,141 119,153 Z" />
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 150,102 C 159,105 164,120 158,137 C 153,144 145,149 139,152 C 143,140 144,120 142,110 Z" />
 
-    <!-- 6. Agricultural Leaf (5 Leaflets in dark/medium green) -->
-    <!-- Leaf Stem -->
+    <!-- 7. Symmetrical Modern Agricultural Plant/Crop -->
+    <!-- Center Growth Stem -->
     <path
-        android:strokeColor="#0E4218"
-        android:strokeWidth="2.5"
+        android:strokeColor="#059669"
+        android:strokeWidth="3.2"
         android:strokeLineCap="round"
-        android:pathData="M100,125 L100,55" />
+        android:pathData="M 100,124 L 100,55" />
 
-    <!-- Central Leaf (Pointing straight up) -->
+    <!-- Top Emergence Leaf - Fresh Mint Green -->
     <path
-        android:fillColor="#0C521C"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="0.8"
-        android:pathData="M100,25 C107,35 107,48 100,60 C93,48 93,35 100,25 Z" />
+        android:fillColor="#10B981"
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 100,55 C 92,43 93,25 100,16 C 108,25 108,43 100,55 Z" />
 
-    <!-- Top-Left Leaf -->
+    <!-- Upper-Left Lateral Leaf - Energetic Forest Green -->
     <path
-        android:fillColor="#0C521C"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="0.8"
-        android:pathData="M100,56 C80,42 66,51 66,66 C80,66 94,64 100,56 Z" />
+        android:fillColor="#047857"
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 97,60 C 82,53 61,60 54,74 C 69,81 88,72 97,60 Z" />
 
-    <!-- Top-Right Leaf -->
+    <!-- Upper-Right Lateral Leaf - Energetic Forest Green -->
     <path
-        android:fillColor="#0C521C"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="0.8"
-        android:pathData="M100,56 C120,42 134,51 134,66 C120,66 106,64 100,56 Z" />
+        android:fillColor="#047857"
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 103,60 C 118,53 139,60 146,74 C 131,81 112,72 103,60 Z" />
 
-    <!-- Bottom-Left Leaf -->
+    <!-- Lower-Left Lateral Leaf - Bright Lime-Green Accent -->
     <path
-        android:fillColor="#0C521C"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="0.8"
-        android:pathData="M100,81 C75,71 61,81 61,96 C78,96 94,92 100,81 Z" />
+        android:fillColor="#4ADE80"
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 97,78 C 78,78 55,89 51.5,104 C 67.5,108 88.5,95 97,78 Z" />
 
-    <!-- Bottom-Right Leaf -->
+    <!-- Lower-Right Lateral Leaf - Bright Lime-Green Accent -->
     <path
-        android:fillColor="#0C521C"
-        android:strokeColor="#FFFFFF"
-        android:strokeWidth="0.8"
-        android:pathData="M100,81 C125,71 139,81 139,96 C122,96 106,92 100,81 Z" />
+        android:fillColor="#4ADE80"
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 103,78 C 122,78 145,89 148.5,104 C 132.5,108 111.5,95 103,78 Z" />
 
-    <!-- 7. Indonesian Flag Badge in center (Merah-Putih) -->
-    <!-- Red part -->
+    <!-- 8. Indonesian National Crest Emblem (Red & White Center Badge) -->
+    <!-- Upper Red Domain -->
     <path
-        android:fillColor="#E53935"
-        android:strokeColor="#121814"
-        android:strokeWidth="0.8"
-        android:pathData="M78,103 C86,96 114,96 122,103 L122,118 C114,111 86,111 78,118 Z" />
-    <!-- White part -->
+        android:fillColor="#EF4444"
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.5"
+        android:pathData="M 72,110 C 84,103 116,103 128,110 L 128,121 C 116,114 84,114 72,121 Z" />
+    <!-- Lower White Domain -->
     <path
         android:fillColor="#FFFFFF"
-        android:strokeColor="#121814"
-        android:strokeWidth="0.8"
-        android:pathData="M78,118 C86,111 114,111 122,118 L122,133 C114,126 86,126 78,133 Z" />
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.5"
+        android:pathData="M 72,121 C 84,114 116,114 128,121 L 127,133 C 115,126 85,126 73,133 Z" />
 
-    <!-- 8. Open Book at the bottom Center of Flag -->
-    <!-- Left Paginated Wing -->
-    <path
-        android:fillColor="#EEEEEE"
-        android:strokeColor="#121814"
-        android:strokeWidth="1"
-        android:pathData="M100,144 C84,136 68,138 60,147 L64,162 C74,154 88,152 100,160 Z" />
-    <!-- Right Paginated Wing -->
+    <!-- 9. Educational Book & Torch Core -->
+    <!-- Left Book Leaf -->
     <path
         android:fillColor="#FFFFFF"
-        android:strokeColor="#121814"
-        android:strokeWidth="1"
-        android:pathData="M100,144 C116,136 132,138 140,147 L136,162 C126,154 112,152 100,160 Z" />
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.6"
+        android:strokeLineJoin="round"
+        android:pathData="M 100,144 C 84,136 66,138 55,147 L 59,162 C 70,153 85,151 100,160 Z" />
+    <!-- Right Book Leaf -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.6"
+        android:strokeLineJoin="round"
+        android:pathData="M 100,144 C 116,136 134,138 145,147 L 141,162 C 130,153 115,151 100,160 Z" />
 
-    <!-- Torch Core Flame / Quill Nib inside Book Pivot -->
+    <!-- Flame Torch (Glows in warm Red-Orange & Gold) -->
     <path
         android:fillColor="#FF5722"
-        android:pathData="M100,126 C102,132 104,138 100,144 C96,138 98,132 100,126 Z" />
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.0"
+        android:pathData="M 100,103 C 104,113 106,122 100,133 C 94,122 96,113 100,103 Z" />
     <path
-        android:fillColor="#121814"
-        android:pathData="M98,144 L102,144 L100,158 Z" />
+        android:fillColor="#FFEB3B"
+        android:pathData="M 100,113 C 102,119 103,124 100,131 C 97,124 98,119 100,113 Z" />
+    <!-- Metal Holder Base -->
+    <path
+        android:fillColor="#374151"
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.0"
+        android:pathData="M 98,131 L 102,131 L 100,143 Z" />
 
-    <!-- 9. Golden Curved Ribbon Banner for "SMKPP NEGERI BIMA" -->
-    <!-- Ribbon Left segment -->
+    <!-- Ripple Water Currents underneath (Representing life & fluidity) -->
     <path
-        android:fillColor="#D3A11A"
-        android:strokeColor="#121814"
-        android:strokeWidth="1.2"
-        android:pathData="M48,162 L32,168 L34,180 L48,171 Z" />
-    <!-- Ribbon Right segment -->
+        android:strokeColor="#059669"
+        android:strokeWidth="2.2"
+        android:strokeLineCap="round"
+        android:pathData="M 82,166 Q 91,162 100,166 Q 109,170 118,166" />
     <path
-        android:fillColor="#D3A11A"
-        android:strokeColor="#121814"
-        android:strokeWidth="1.2"
-        android:pathData="M152,162 L168,168 L166,180 L152,171 Z" />
+        android:strokeColor="#059669"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:pathData="M 85,171 Q 92.5,168 100,171 Q 107.5,174 115,171" />
 
-    <!-- Ribbon Main Body -->
+    <!-- 10. Floating Saffron-Gold Ribbon Banner of School Pride -->
+    <!-- Fold Ribbons Left -->
     <path
-        android:fillColor="#F6C42A"
-        android:strokeColor="#121814"
+        android:fillColor="#D97706"
+        android:strokeColor="#061F12"
         android:strokeWidth="1.5"
-        android:pathData="M44,162 Q100,188 156,162 L154,174 Q100,200 42,174 Z" />
+        android:pathData="M 43,158 L 27,166 C 27,166 28,178 29,179 L 44,170 Z" />
+    <!-- Fold Ribbons Right -->
+    <path
+        android:fillColor="#D97706"
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.5"
+        android:pathData="M 157,158 L 173,166 C 173,166 172,178 171,179 L 156,170 Z" />
 
-    <!-- Text styling representation paths (neatly styled block letters inside the ribbon) -->
-    <!-- Representation of text characters with black segments to emulate professional text layout -->
+    <!-- Ribbon Mid-Structure Body -->
     <path
-        android:fillColor="#111111"
-        android:pathData="M 60,169 H 63 Q 63,171 61,171 H 60 M 66,167 H 69 Q 68,171 66,170" />
-    <path
-        android:fillColor="#111111"
-        android:pathData="M 74,171 L 76,168 L 78,171 M 84,169 H 88 L 86,173" />
-    <path
-        android:fillColor="#111111"
-        android:pathData="M 94,173 L 95,170 Q 98,174 100,173" />
-    <path
-        android:fillColor="#111111"
-        android:pathData="M 112,173 L 115,170 Q 118,174 122,173" />
-    <path
-        android:fillColor="#111111"
-        android:pathData="M 130,171 L 134,169 Q 138,172 140,171" />
+        android:fillColor="#FBBF24"
+        android:strokeColor="#061F12"
+        android:strokeWidth="1.8"
+        android:strokeLineJoin="round"
+        android:pathData="M 38,158 Q 100,186 162,158 L 159,172 Q 100,200 41,172 Z" />
+
+    <!-- True Vector Text Glyphs for: "SMKPP NEGERI BIMA" (Perfect Alignment with Crisp Forest Ink) -->
+    <!-- S (x=53.5) -->
+    <path android:fillColor="#061F12" android:pathData="M53.5,169 C55,168.5 56,169.5 56,170.5 C56,171.5 54,171.8 54,172.5 C54,173.2 55.8,173.5 55.8,174.5 C55.8,175.5 54.2,176 53,175 L53,173.8 C54,174.2 54.8,174.4 54.8,174 C54.8,173.6 53.2,173.2 53.2,172.2 C53.2,171.2 54.8,170.8 54.8,170.4 Z" />
+    <!-- M (x=58) -->
+    <path android:fillColor="#061F12" android:pathData="M58,176 L58,169.5 L60,173 L62,169.5 L62,176 L61,176 L61,171.5 L59.5,174.5 L58.5,174.5 L57,171.5 L57,176 Z" />
+    <!-- K (x=64) -->
+    <path android:fillColor="#061F12" android:pathData="M64,176 L64,169.5 L65,169.5 L65,172.5 L67.5,169.5 L69,169.5 L66.2,172.8 L69,176 L67.8,176 L65,173.5 L65,176 Z" />
+    <!-- P (x=70.5) -->
+    <path android:fillColor="#061F12" android:pathData="M70.5,176 L70.5,169.5 L72.5,169.5 C73.5,169.5 74,170.2 74,171.2 C74,172.2 73.5,172.8 72.5,172.8 L71.5,172.8 L71.5,176 Z M71.5,171.8 L72.5,171.8 C73,171.8 73.2,171.5 73.2,171.2 C73.2,170.8 73,170.5 72.5,170.5 L71.5,170.5 Z" />
+    <!-- P (x=75.5) -->
+    <path android:fillColor="#061F12" android:pathData="M75.5,176 L75.5,169.5 L77.5,169.5 C78.5,169.5 79,170.2 79,171.2 C79,172.2 78.5,172.8 77.5,172.8 L76.5,172.8 L76.5,176 Z M76.5,171.8 L77.5,171.8 C78,171.8 78.2,171.5 78.2,171.2 C78.2,170.8 78,170.5 77.5,170.5 L76.5,170.5 Z" />
+    
+    <!-- N (x=83) -->
+    <path android:fillColor="#061F12" android:pathData="M83,176.5 L83,170 L84.2,170 L87.2,174.5 L87.2,170 L88.2,170 L88.2,176.5 L87,176.5 L84,172 L84,176.5 Z" />
+    <!-- E (x=90) -->
+    <path android:fillColor="#061F12" android:pathData="M90,176.5 L90,170 L93.5,170 L93.5,171 L91.2,171 L91.2,172.5 L93,172.5 L93,173.5 L91.2,173.5 L91.2,175.5 L93.5,175.5 L93.5,176.5 Z" />
+    <!-- G (x=95.5) -->
+    <path android:fillColor="#061F12" android:pathData="M95.5,173.5 C95.5,171.5 96.8,170 98.5,170 C99.8,170 100.8,170.8 101,171.8 L100,172.2 C99.8,171.5 99.2,171 98.5,171 C97.5,171 96.6,172 96.6,173.5 C96.6,175 97.5,176 98.5,176 C99.2,176 99.8,175.5 100,174.8 L98.5,174.8 L98.5,173.8 L101,173.8 L101,176.5 C100.2,176.8 99.3,177 98.5,177 C96.8,177 95.5,175.5 95.5,173.5 Z" />
+    <!-- E (x=103) -->
+    <path android:fillColor="#061F12" android:pathData="M103,176.5 L103,170 L106.5,170 L106.5,171 L104.2,171 L104.2,172.5 L106,172.5 L106,173.5 L104.2,173.5 L104.2,175.5 L106.5,175.5 L106.5,176.5 Z" />
+    <!-- R (x=108.5) -->
+    <path android:fillColor="#061F12" android:pathData="M108.5,176.5 L108.5,170 L111,170 C112.2,170 113,170.8 113,171.8 C113,172.8 112.2,173.5 111,173.5 L109.7,173.5 L113,176.5 L111.5,176.5 L109.7,174.5 L109.7,176.5 Z M109.7,172.5 L111,172.5 C111.5,172.5 111.8,172.2 111.8,171.8 C111.8,171.4 111.5,171.1 111,171.1 L109.7,171.1 Z" />
+    <!-- I (x=115) -->
+    <path android:fillColor="#061F12" android:pathData="M115,176.5 L115,170 L116.2,170 L116.2,176.5 Z" />
+    
+    <!-- B (x=121.5) -->
+    <path android:fillColor="#061F12" android:pathData="M121.5,176 L121.5,169.5 L124,169.5 C125,169.5 125.8,170 125.8,171 C125.8,171.8 125.2,172.3 124.2,172.5 C125.2,172.7 126,173.2 126,174.2 C126,175.2 125,176 124,176 Z M122.5,172 L123.8,172 C124.3,172 124.7,171.7 124.7,171.2 C124.7,170.7 124.3,170.4 123.8,170.4 L122.5,170.4 Z M122.5,175 L123.8,175 C124.4,175 124.9,174.7 124.9,174.2 C124.9,173.7 124.4,173.4 123.8,173.4 L122.5,173.4 Z" />
+    <!-- I (x=128) -->
+    <path android:fillColor="#061F12" android:pathData="M128,176 L128,169.5 L129.2,169.5 L129.2,176 Z" />
+    <!-- M (x=131.5) -->
+    <path android:fillColor="#061F12" android:pathData="M131.5,176 L131.5,169.5 L133.5,173 L135.5,169.5 L135.5,176 L134.5,176 L134.5,171.5 L133,174.5 L132,174.5 L130.5,171.5 L130.5,176 Z" />
+    <!-- A (x=137.5) -->
+    <path android:fillColor="#061F12" android:pathData="M137.5,176 L139.5,169.5 L141,169.5 L143,176 L141.8,176 L141.2,173.8 L139.2,173.8 L138.6,176 Z M139.5,172.8 L141,172.8 L140.25,170.5 Z" />
 
 </vector>

@@ -51,11 +51,20 @@ import kotlinx.coroutines.delay
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.alpha
 import com.example.ui.theme.MyApplicationTheme
+import android.provider.Settings
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 
 class MainActivity : ComponentActivity() {
 
     // Globals for Web file uploads
     var fileUploadCallback: ValueCallback<Array<Uri>>? = null
+
+    // Globals for Web Geolocation & Camera prompts
+    var pendingGeolocationCallback: GeolocationPermissions.Callback? = null
+    var pendingGeolocationOrigin: String? = null
+    var pendingPermissionRequest: PermissionRequest? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -64,6 +73,29 @@ class MainActivity : ComponentActivity() {
             MyApplicationTheme {
                 MainScreen(this)
             }
+        }
+    }
+
+    override fun onRequestPermissionsResult(
+        requestCode: Int,
+        permissions: Array<String>,
+        grantResults: IntArray
+    ) {
+        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
+        if (requestCode == 1002) {
+            val isGranted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            pendingGeolocationCallback?.invoke(pendingGeolocationOrigin, isGranted, false)
+            pendingGeolocationCallback = null
+            pendingGeolocationOrigin = null
+        } else if (requestCode == 1003) {
+            val isGranted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
+            if (isGranted) {
+                val resources = pendingPermissionRequest?.resources ?: emptyArray()
+                pendingPermissionRequest?.grant(resources)
+            } else {
+                pendingPermissionRequest?.deny()
+            }
+            pendingPermissionRequest = null
         }
     }
 }
@@ -89,6 +121,25 @@ fun MainScreen(activity: MainActivity) {
                 ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
             }
         )
+    }
+
+    // Dynamic lifecycle observer to check permissions when resuming
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                val allGranted = requiredPermissions.all {
+                    ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+                }
+                if (allGranted) {
+                    permissionsGranted = true
+                }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
     }
 
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
@@ -229,6 +280,7 @@ fun MainScreen(activity: MainActivity) {
                                 settings.allowFileAccess = true
                                 settings.allowContentAccess = true
                                 settings.mediaPlaybackRequiresUserGesture = false
+                                settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
 
                                 // Viewports & responsiveness
                                 settings.useWideViewPort = true
@@ -274,17 +326,48 @@ fun MainScreen(activity: MainActivity) {
                                         origin: String?,
                                         callback: GeolocationPermissions.Callback?
                                     ) {
-                                        // Validate dynamic check on GPS permission
                                         val hasGps = ContextCompat.checkSelfPermission(
-                                            ctx, Manifest.permission.ACCESS_FINE_LOCATION
+                                            activity, Manifest.permission.ACCESS_FINE_LOCATION
                                         ) == PackageManager.PERMISSION_GRANTED
-                                        callback?.invoke(origin, hasGps, false)
+
+                                        if (hasGps) {
+                                            callback?.invoke(origin, true, false)
+                                        } else {
+                                            activity.pendingGeolocationOrigin = origin
+                                            activity.pendingGeolocationCallback = callback
+                                            androidx.core.app.ActivityCompat.requestPermissions(
+                                                activity,
+                                                arrayOf(
+                                                    Manifest.permission.ACCESS_FINE_LOCATION,
+                                                    Manifest.permission.ACCESS_COARSE_LOCATION
+                                                ),
+                                                1002
+                                            )
+                                        }
                                     }
 
                                     override fun onPermissionRequest(request: PermissionRequest?) {
-                                        // Dynamically grant html5 features like video layout/audio capture
                                         val resources = request?.resources ?: emptyArray()
-                                        request?.grant(resources)
+                                        val hasCameraResource = resources.contains(PermissionRequest.RESOURCE_VIDEO_CAPTURE)
+
+                                        if (hasCameraResource) {
+                                            val hasCamera = ContextCompat.checkSelfPermission(
+                                                activity, Manifest.permission.CAMERA
+                                            ) == PackageManager.PERMISSION_GRANTED
+
+                                             if (hasCamera) {
+                                                 request?.grant(resources)
+                                             } else {
+                                                 activity.pendingPermissionRequest = request
+                                                 androidx.core.app.ActivityCompat.requestPermissions(
+                                                     activity,
+                                                     arrayOf(Manifest.permission.CAMERA),
+                                                     1003
+                                                 )
+                                             }
+                                        } else {
+                                            request?.grant(resources)
+                                        }
                                     }
 
                                     override fun onShowFileChooser(
@@ -332,14 +415,34 @@ fun PermissionOnboardingScreen(
     requiredPermissions: Array<String>,
     onPermissionsApproved: () -> Unit
 ) {
-    val permissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestMultiplePermissions()
-    ) { _ ->
-        // Continue regardless of choice so user doesn't hit a complete dead end
-        onPermissionsApproved()
+    val context = LocalContext.current
+    var permissionsPromptedCount by remember { mutableStateOf(0) }
+
+    val checkAllPermissionsGranted = {
+        requiredPermissions.all {
+            ContextCompat.checkSelfPermission(context, it) == PackageManager.PERMISSION_GRANTED
+        }
     }
 
-    Column(
+    val permissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestMultiplePermissions()
+    ) { results ->
+        permissionsPromptedCount++
+        val allGranted = requiredPermissions.all { perm ->
+            results[perm] == true || ContextCompat.checkSelfPermission(context, perm) == PackageManager.PERMISSION_GRANTED
+        }
+        if (allGranted) {
+            onPermissionsApproved()
+        }
+    }
+
+    LaunchedEffect(Unit) {
+        if (!checkAllPermissionsGranted()) {
+            permissionLauncher.launch(requiredPermissions)
+        }
+    }
+
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
@@ -349,152 +452,224 @@ fun PermissionOnboardingScreen(
                         Color(0xFF1B5E20)  // Deep green
                     )
                 )
-            )
-            .padding(24.dp)
-            .verticalScroll(rememberScrollState()),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
-    ) {
-        Box(
-            modifier = Modifier
-                .size(110.dp)
-                .clip(RoundedCornerShape(32.dp))
-                .background(Color.White.copy(alpha = 0.12f))
-                .padding(12.dp),
-            contentAlignment = Alignment.Center
-        ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_school_logo),
-                contentDescription = "Logo SMKPP Negeri Bima",
-                modifier = Modifier.size(80.dp)
-            )
-        }
-
-        Spacer(modifier = Modifier.height(28.dp))
-
-        Text(
-            text = "SMKPP Negeri Bima",
-            color = Color.White,
-            fontWeight = FontWeight.Bold,
-            fontSize = 26.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Text(
-            text = "Sistem Portal Jurnal & Presensi",
-            color = Color.White.copy(alpha = 0.8f),
-            fontWeight = FontWeight.Medium,
-            fontSize = 16.sp,
-            textAlign = TextAlign.Center
-        )
-
-        Spacer(modifier = Modifier.height(24.dp))
-
-        Card(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp),
-            colors = CardDefaults.cardColors(
-                containerColor = Color.White.copy(alpha = 0.08f)
             ),
-            shape = RoundedCornerShape(16.dp)
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 560.dp)
+                .fillMaxWidth()
+                .padding(24.dp)
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Column(
-                modifier = Modifier.padding(20.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp)
+            Box(
+                modifier = Modifier
+                    .size(110.dp)
+                    .clip(RoundedCornerShape(32.dp))
+                    .background(Color.White.copy(alpha = 0.12f))
+                    .padding(12.dp),
+                contentAlignment = Alignment.Center
             ) {
-                Text(
-                    text = "Aplikasi ini memerlukan beberapa izin agar sistem absensi & portal berjalan dengan optimal:",
-                    color = Color.White.copy(alpha = 0.9f),
-                    fontSize = 14.sp,
-                    lineHeight = 20.sp
+                Image(
+                    painter = painterResource(id = R.drawable.ic_school_logo),
+                    contentDescription = "Logo SMKPP Negeri Bima",
+                    modifier = Modifier.size(80.dp)
                 )
+            }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "SMKPP Negeri Bima",
+                color = Color.White,
+                fontWeight = FontWeight.Bold,
+                fontSize = 26.sp,
+                textAlign = TextAlign.Center
+            )
+
+            Text(
+                text = "Sistem Portal Jurnal & Presensi",
+                color = Color.White.copy(alpha = 0.8f),
+                fontWeight = FontWeight.Medium,
+                fontSize = 16.sp,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            // Info Card
+            Card(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 8.dp),
+                colors = CardDefaults.cardColors(
+                    containerColor = Color.White.copy(alpha = 0.08f)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(20.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Geolokasi",
-                        tint = Color(0xFF81C784),
-                        modifier = Modifier.size(24.dp)
+                    Text(
+                        text = "Aplikasi ini memerlukan izin agar sistem absensi online (titik koordinat GPS) dan upload dokumentasi (kamera) berjalan dengan akurat & sah:",
+                        color = Color.White.copy(alpha = 0.9f),
+                        fontSize = 14.sp,
+                        lineHeight = 20.sp
                     )
-                    Column {
-                        Text(
-                            text = "Geolokasi (Lokasi GPS)",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Geolokasi",
+                            tint = Color(0xFF81C784),
+                            modifier = Modifier.size(24.dp)
                         )
-                        Text(
-                            text = "Digunakan untuk memvalidasi titik koordinat lokasi saat Anda mengisi absensi online.",
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 12.sp
-                        )
+                        Column {
+                            Text(
+                                text = "Geolokasi (Lokasi GPS)",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "Wajib aktif saat pengisian absensi jurnal untuk memverifikasi lokasi koordinat Anda di lapangan.",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 12.sp
+                            )
+                        }
                     }
-                }
 
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    Icon(
-                        imageVector = Icons.Default.Info,
-                        contentDescription = "Kamera",
-                        tint = Color(0xFF81C784),
-                        modifier = Modifier.size(24.dp)
-                    )
-                    Column {
-                        Text(
-                            text = "Kamera & Dokumen",
-                            color = Color.White,
-                            fontWeight = FontWeight.Bold,
-                            fontSize = 14.sp
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.Info,
+                            contentDescription = "Kamera",
+                            tint = Color(0xFF81C784),
+                            modifier = Modifier.size(24.dp)
                         )
-                        Text(
-                            text = "Digunakan untuk mengambil foto bukti fisik kegiatan atau mengunggah dokumen jurnal harian.",
-                            color = Color.White.copy(alpha = 0.7f),
-                            fontSize = 12.sp
-                        )
+                        Column {
+                            Text(
+                                text = "Kamera & Unggah Berkas",
+                                color = Color.White,
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                            Text(
+                                text = "Digunakan saat mengunggah foto bukti fisik kegiatan pembelajaran atau foto profil presensi.",
+                                color = Color.White.copy(alpha = 0.7f),
+                                fontSize = 12.sp
+                            )
+                        }
                     }
                 }
             }
-        }
 
-        Spacer(modifier = Modifier.height(36.dp))
+            Spacer(modifier = Modifier.height(24.dp))
 
-        Button(
-            onClick = {
-                permissionLauncher.launch(requiredPermissions)
-            },
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(52.dp)
-                .padding(horizontal = 12.dp),
-            colors = ButtonDefaults.buttonColors(
-                containerColor = Color.White,
-                contentColor = Color(0xFF13502C)
-            ),
-            shape = RoundedCornerShape(26.dp)
-        ) {
-            Text(
-                text = "Izinkan & Buka Portal",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold
-            )
-        }
+            // Dynamic warning box if permissions were requested but failed
+            val currentlyGranted = checkAllPermissionsGranted()
+            if (permissionsPromptedCount > 0 && !currentlyGranted) {
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 8.dp, vertical = 8.dp),
+                    colors = CardDefaults.cardColors(
+                        containerColor = MaterialTheme.colorScheme.errorContainer.copy(alpha = 0.9f)
+                    ),
+                    shape = RoundedCornerShape(12.dp)
+                ) {
+                    Column(
+                        modifier = Modifier.padding(14.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Text(
+                            text = "Peringatan: Izin Belum Lengkap!",
+                            color = MaterialTheme.colorScheme.onErrorContainer,
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Text(
+                            text = "Sistem mendeteksi bahwa beberapa izin penting dinonaktifkan di sistem Android Anda. Silakan klik tombol di bawah untuk mengaktifkannya secara manual.",
+                            color = MaterialTheme.colorScheme.onErrorContainer.copy(alpha = 0.8f),
+                            fontSize = 12.sp,
+                            lineHeight = 16.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Button(
+                            onClick = {
+                                try {
+                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                        data = Uri.fromParts("package", context.packageName, null)
+                                    }
+                                    context.startActivity(intent)
+                                } catch (e: Exception) {
+                                    try {
+                                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                                    } catch (ex: Exception) {}
+                                }
+                            },
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.error,
+                                contentColor = MaterialTheme.colorScheme.onError
+                            ),
+                            shape = RoundedCornerShape(8.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(
+                                text = "Buka Pengaturan Aplikasi",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 13.sp
+                            )
+                        }
+                    }
+                }
 
-        Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
+            }
 
-        TextButton(
-            onClick = { onGrantPermissionsRequested() }
-        ) {
-            Text(
-                text = "Lewati untuk navigasi dasar",
-                color = Color.White.copy(alpha = 0.6f),
-                fontSize = 13.sp
-            )
+            Button(
+                onClick = {
+                    permissionLauncher.launch(requiredPermissions)
+                },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp)
+                    .padding(horizontal = 12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = Color.White,
+                    contentColor = Color(0xFF13502C)
+                ),
+                shape = RoundedCornerShape(26.dp)
+            ) {
+                Text(
+                    text = if (permissionsPromptedCount > 0) "Minta Izin Lagi" else "Izinkan & Buka Portal",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            TextButton(
+                onClick = { onGrantPermissionsRequested() }
+            ) {
+                Text(
+                    text = "Lewati untuk navigasi dasar (Absensi GPS mungkin tidak jalan)",
+                    color = Color.White.copy(alpha = 0.6f),
+                    fontSize = 12.sp,
+                    textAlign = TextAlign.Center
+                )
+            }
         }
     }
 }
@@ -523,7 +698,7 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
         onSplashFinished()
     }
 
-    Column(
+    Box(
         modifier = Modifier
             .fillMaxSize()
             .background(
@@ -534,66 +709,85 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
                         Color(0xFF1B5E20)  // Solid academic green
                     )
                 )
-            )
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.Center
+            ),
+        contentAlignment = Alignment.Center
     ) {
-        Box(
+        Column(
             modifier = Modifier
-                .size(160.dp)
-                .scale(scale)
-                .alpha(alpha),
-            contentAlignment = Alignment.Center
+                .widthIn(max = 500.dp)
+                .fillMaxWidth()
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
         ) {
-            Image(
-                painter = painterResource(id = R.drawable.ic_school_logo),
-                contentDescription = "Logo SMKPP Negeri Bima",
-                modifier = Modifier.fillMaxSize()
+            Box(
+                modifier = Modifier
+                    .size(160.dp)
+                    .scale(scale)
+                    .alpha(alpha),
+                contentAlignment = Alignment.Center
+            ) {
+                Image(
+                    painter = painterResource(id = R.drawable.ic_school_logo),
+                    contentDescription = "Logo SMKPP Negeri Bima",
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
+
+            Spacer(modifier = Modifier.height(28.dp))
+
+            Text(
+                text = "DINAS PERTANIAN DAN KETAHANAN PANGAN",
+                color = Color.White.copy(alpha = 0.9f),
+                fontWeight = FontWeight.SemiBold,
+                fontSize = 13.sp,
+                letterSpacing = 1.2.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.alpha(alpha)
+            )
+
+            Spacer(modifier = Modifier.height(6.dp))
+
+            Text(
+                text = "SMKPP NEGERI BIMA",
+                color = Color(0xFFF1C40F), // Elegant gold label
+                fontWeight = FontWeight.Bold,
+                fontSize = 25.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.alpha(alpha)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            Text(
+                text = "PROVINSI NUSA TENGGARA BARAT",
+                color = Color.White.copy(alpha = 0.75f),
+                fontWeight = FontWeight.Medium,
+                fontSize = 12.sp,
+                letterSpacing = 1.6.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.alpha(alpha)
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            Text(
+                text = "Sistem Informasi & Absensi Digital",
+                color = Color.White.copy(alpha = 0.55f),
+                fontSize = 13.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.alpha(alpha)
+            )
+
+            Spacer(modifier = Modifier.height(44.dp))
+
+            CircularProgressIndicator(
+                color = Color(0xFF2EE069), // Brighter matching green loader
+                strokeWidth = 3.dp,
+                modifier = Modifier
+                    .size(32.dp)
+                    .alpha(alpha)
             )
         }
-
-        Spacer(modifier = Modifier.height(28.dp))
-
-        Text(
-            text = "SMKPP NEGERI BIMA",
-            color = Color(0xFFF1C40F), // Elegant gold label
-            fontWeight = FontWeight.Bold,
-            fontSize = 24.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.alpha(alpha)
-        )
-
-        Spacer(modifier = Modifier.height(6.dp))
-
-        Text(
-            text = "KEMENTERIAN PERTANIAN",
-            color = Color.White,
-            fontWeight = FontWeight.SemiBold,
-            fontSize = 13.sp,
-            letterSpacing = 1.6.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.alpha(alpha)
-        )
-
-        Spacer(modifier = Modifier.height(18.dp))
-
-        Text(
-            text = "Sistem Informasi & Absensi Digital",
-            color = Color.White.copy(alpha = 0.6f),
-            fontSize = 13.sp,
-            textAlign = TextAlign.Center,
-            modifier = Modifier.alpha(alpha)
-        )
-
-        Spacer(modifier = Modifier.height(48.dp))
-
-        CircularProgressIndicator(
-            color = Color(0xFF2EE069), // Brighter matching green loader
-            strokeWidth = 3.dp,
-            modifier = Modifier
-                .size(32.dp)
-                .alpha(alpha)
-        )
     }
 }
