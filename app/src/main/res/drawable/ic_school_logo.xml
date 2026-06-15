@@ -1,0 +1,184 @@
+<?xml version="1.0" encoding="utf-8"?>
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="200dp"
+    android:height="200dp"
+    android:viewportWidth="200"
+    android:viewportHeight="200">
+
+    <!-- 1. Outer Dark Pentagon Border -->
+    <path
+        android:fillColor="#121814"
+        android:strokeColor="#121814"
+        android:strokeWidth="1"
+        android:pathData="M100,5 C148,5 192,42 192,86 C192,120 178,154 153,191 C151,194 147,194 144,194 L56,194 C53,194 49,194 47,191 C22,154 8,120 8,86 C8,42 52,5 100,5 Z" />
+
+    <!-- 2. Medium White Outline Shield Inside -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:pathData="M100,9 C144,9 186,44 186,86 C186,118 172,151 148,188 C147,190 144,190 142,190 L58,190 C56,190 53,190 52,188 C28,151 14,118 14,86 C14,44 56,9 100,9 Z" />
+
+    <!-- 3. Primary Inner Bright Green Shield (Matching the school green backdrop) -->
+    <path
+        android:fillColor="#2EE069"
+        android:pathData="M100,12 C141,12 181,46 181,86 C181,116 168,148 145,185 C144,187 141,187 139,187 L61,187 C59,187 56,187 55,185 C32,148 19,116 19,86 C19,46 59,12 100,12 Z" />
+
+    <!-- 4. Inner Dark Accent Ring Inside the Green Border -->
+    <path
+        android:strokeColor="#1E5C2D"
+        android:strokeWidth="1.5"
+        android:pathData="M100,20 C135,20 169,50 169,86 C169,112 157,140 137,173 L63,173 C43,140 31,112 31,86 C31,50 65,20 100,20 Z" />
+
+    <!-- 5. Wings (Left side & Right side - White Wings flanking the center) -->
+    <!-- Left Wing Feathers -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#121814"
+        android:strokeWidth="1"
+        android:pathData="M81,139 C50,131 38,109 38,78 C38,103 52,126 76,142 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#121814"
+        android:strokeWidth="1"
+        android:pathData="M84,144 C56,138 41,118 41,91 C41,112 56,134 78,148 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#121814"
+        android:strokeWidth="1"
+        android:pathData="M87,150 C62,146 45,128 45,103 C45,121 59,141 81,153 Z" />
+
+    <!-- Right Wing Feathers -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#121814"
+        android:strokeWidth="1"
+        android:pathData="M119,139 C150,131 162,109 162,78 C162,103 148,126 124,142 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#121814"
+        android:strokeWidth="1"
+        android:pathData="M116,144 C144,138 159,118 159,91 C159,112 144,134 122,148 Z" />
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#121814"
+        android:strokeWidth="1"
+        android:pathData="M113,150 C138,146 155,128 155,103 C155,121 141,141 119,153 Z" />
+
+    <!-- 6. Agricultural Leaf (5 Leaflets in dark/medium green) -->
+    <!-- Leaf Stem -->
+    <path
+        android:strokeColor="#0E4218"
+        android:strokeWidth="2.5"
+        android:strokeLineCap="round"
+        android:pathData="M100,125 L100,55" />
+
+    <!-- Central Leaf (Pointing straight up) -->
+    <path
+        android:fillColor="#0C521C"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:pathData="M100,25 C107,35 107,48 100,60 C93,48 93,35 100,25 Z" />
+
+    <!-- Top-Left Leaf -->
+    <path
+        android:fillColor="#0C521C"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:pathData="M100,56 C80,42 66,51 66,66 C80,66 94,64 100,56 Z" />
+
+    <!-- Top-Right Leaf -->
+    <path
+        android:fillColor="#0C521C"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:pathData="M100,56 C120,42 134,51 134,66 C120,66 106,64 100,56 Z" />
+
+    <!-- Bottom-Left Leaf -->
+    <path
+        android:fillColor="#0C521C"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:pathData="M100,81 C75,71 61,81 61,96 C78,96 94,92 100,81 Z" />
+
+    <!-- Bottom-Right Leaf -->
+    <path
+        android:fillColor="#0C521C"
+        android:strokeColor="#FFFFFF"
+        android:strokeWidth="0.8"
+        android:pathData="M100,81 C125,71 139,81 139,96 C122,96 106,92 100,81 Z" />
+
+    <!-- 7. Indonesian Flag Badge in center (Merah-Putih) -->
+    <!-- Red part -->
+    <path
+        android:fillColor="#E53935"
+        android:strokeColor="#121814"
+        android:strokeWidth="0.8"
+        android:pathData="M78,103 C86,96 114,96 122,103 L122,118 C114,111 86,111 78,118 Z" />
+    <!-- White part -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#121814"
+        android:strokeWidth="0.8"
+        android:pathData="M78,118 C86,111 114,111 122,118 L122,133 C114,126 86,126 78,133 Z" />
+
+    <!-- 8. Open Book at the bottom Center of Flag -->
+    <!-- Left Paginated Wing -->
+    <path
+        android:fillColor="#EEEEEE"
+        android:strokeColor="#121814"
+        android:strokeWidth="1"
+        android:pathData="M100,144 C84,136 68,138 60,147 L64,162 C74,154 88,152 100,160 Z" />
+    <!-- Right Paginated Wing -->
+    <path
+        android:fillColor="#FFFFFF"
+        android:strokeColor="#121814"
+        android:strokeWidth="1"
+        android:pathData="M100,144 C116,136 132,138 140,147 L136,162 C126,154 112,152 100,160 Z" />
+
+    <!-- Torch Core Flame / Quill Nib inside Book Pivot -->
+    <path
+        android:fillColor="#FF5722"
+        android:pathData="M100,126 C102,132 104,138 100,144 C96,138 98,132 100,126 Z" />
+    <path
+        android:fillColor="#121814"
+        android:pathData="M98,144 L102,144 L100,158 Z" />
+
+    <!-- 9. Golden Curved Ribbon Banner for "SMKPP NEGERI BIMA" -->
+    <!-- Ribbon Left segment -->
+    <path
+        android:fillColor="#D3A11A"
+        android:strokeColor="#121814"
+        android:strokeWidth="1.2"
+        android:pathData="M48,162 L32,168 L34,180 L48,171 Z" />
+    <!-- Ribbon Right segment -->
+    <path
+        android:fillColor="#D3A11A"
+        android:strokeColor="#121814"
+        android:strokeWidth="1.2"
+        android:pathData="M152,162 L168,168 L166,180 L152,171 Z" />
+
+    <!-- Ribbon Main Body -->
+    <path
+        android:fillColor="#F6C42A"
+        android:strokeColor="#121814"
+        android:strokeWidth="1.5"
+        android:pathData="M44,162 Q100,188 156,162 L154,174 Q100,200 42,174 Z" />
+
+    <!-- Text styling representation paths (neatly styled block letters inside the ribbon) -->
+    <!-- Representation of text characters with black segments to emulate professional text layout -->
+    <path
+        android:fillColor="#111111"
+        android:pathData="M 60,169 H 63 Q 63,171 61,171 H 60 M 66,167 H 69 Q 68,171 66,170" />
+    <path
+        android:fillColor="#111111"
+        android:pathData="M 74,171 L 76,168 L 78,171 M 84,169 H 88 L 86,173" />
+    <path
+        android:fillColor="#111111"
+        android:pathData="M 94,173 L 95,170 Q 98,174 100,173" />
+    <path
+        android:fillColor="#111111"
+        android:pathData="M 112,173 L 115,170 Q 118,174 122,173" />
+    <path
+        android:fillColor="#111111"
+        android:pathData="M 130,171 L 134,169 Q 138,172 140,171" />
+
+</vector>

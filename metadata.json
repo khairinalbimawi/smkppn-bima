@@ -1,0 +1,6 @@
+{
+  "name": "SMKPP Negeri Bima",
+  "description": "A secure, modern Android WebView application designed for SMKPP Negeri Bima, featuring integrated Chrome clients with full support for Camera and Geolocation features.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
