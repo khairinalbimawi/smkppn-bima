@@ -112,9 +112,25 @@ class MainActivity : ComponentActivity() {
         super.onRequestPermissionsResult(requestCode, permissions, grantResults)
         if (requestCode == 1002) {
             val isGranted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
-            pendingGeolocationCallback?.invoke(pendingGeolocationOrigin, isGranted, false)
-            pendingGeolocationCallback = null
-            pendingGeolocationOrigin = null
+            if (isGranted) {
+                // Check if device GPS sensor is turned on
+                val lm = getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager
+                val isGpsEnabled = lm?.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) == true ||
+                                   lm?.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) == true
+                
+                if (isGpsEnabled) {
+                    pendingGeolocationCallback?.invoke(pendingGeolocationOrigin, true, false)
+                    pendingGeolocationCallback = null
+                    pendingGeolocationOrigin = null
+                } else {
+                    // Force display GPS activation window
+                    showGpsSettingsDialog(this, pendingGeolocationOrigin, pendingGeolocationCallback)
+                }
+            } else {
+                pendingGeolocationCallback?.invoke(pendingGeolocationOrigin, false, false)
+                pendingGeolocationCallback = null
+                pendingGeolocationOrigin = null
+            }
         } else if (requestCode == 1003) {
             val isGranted = grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED
             if (isGranted) {
@@ -136,6 +152,43 @@ fun Context.findActivity(): Activity? {
         ctx = ctx.baseContext
     }
     return null
+}
+
+// Elegant helper to trigger the system window prompting user to activate device GPS Services
+fun showGpsSettingsDialog(
+    activity: Activity,
+    origin: String?,
+    callback: GeolocationPermissions.Callback?
+) {
+    activity.runOnUiThread {
+        android.app.AlertDialog.Builder(activity)
+            .setTitle("Aktifkan Layanan Lokasi (GPS)")
+            .setMessage("Untuk dapat mengisi absensi jurnal harian dan menggunakan koordinat GPS, silakan aktifkan Layanan Lokasi (GPS) Anda melalui Pengaturan agar presensi Anda dinyatakan sah.")
+            .setCancelable(false)
+            .setPositiveButton("Buka Pengaturan") { dialog, _ ->
+                dialog.dismiss()
+                if (activity is MainActivity) {
+                    activity.pendingGeolocationOrigin = origin
+                    activity.pendingGeolocationCallback = callback
+                }
+                try {
+                    val intent = Intent(android.provider.Settings.ACTION_LOCATION_SOURCE_SETTINGS)
+                    activity.startActivity(intent)
+                } catch (e: Exception) {
+                    try {
+                        val intent = Intent(android.provider.Settings.ACTION_SETTINGS)
+                        activity.startActivity(intent)
+                    } catch (ex: Exception) {
+                        callback?.invoke(origin, false, false)
+                    }
+                }
+            }
+            .setNegativeButton("Batal") { dialog, _ ->
+                dialog.dismiss()
+                callback?.invoke(origin, false, false)
+            }
+            .show()
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -163,6 +216,8 @@ fun MainScreen(activity: MainActivity) {
         )
     }
 
+    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
+
     // Dynamic lifecycle observer to check permissions when resuming
     val lifecycleOwner = LocalLifecycleOwner.current
     DisposableEffect(lifecycleOwner) {
@@ -173,6 +228,23 @@ fun MainScreen(activity: MainActivity) {
                 }
                 if (allGranted) {
                     permissionsGranted = true
+                }
+
+                // If there is a pending Geolocation request and the user returns to the app with GPS enabled
+                if (activity.pendingGeolocationCallback != null) {
+                    val hasPerm = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                    val lm = context.getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager
+                    val isGpsActive = lm?.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) == true ||
+                                      lm?.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) == true
+                    
+                    if (hasPerm && isGpsActive) {
+                        try {
+                            activity.pendingGeolocationCallback?.invoke(activity.pendingGeolocationOrigin, true, false)
+                        } catch (e: Exception) {}
+                        activity.pendingGeolocationCallback = null
+                        activity.pendingGeolocationOrigin = null
+                        webViewInstance?.reload()
+                    }
                 }
                 
                 // Reapply immersive fullscreen mode when app resumes
@@ -190,7 +262,6 @@ fun MainScreen(activity: MainActivity) {
         }
     }
 
-    var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var isLoading by remember { mutableStateOf(false) }
     var webProgress by remember { mutableStateOf(0f) }
     var canGoBack by remember { mutableStateOf(false) }
@@ -463,13 +534,11 @@ fun MainScreen(activity: MainActivity) {
                                         origin: String?,
                                         callback: GeolocationPermissions.Callback?
                                     ) {
-                                        val hasGps = ContextCompat.checkSelfPermission(
+                                        val hasGpsPermission = ContextCompat.checkSelfPermission(
                                             activity, Manifest.permission.ACCESS_FINE_LOCATION
                                         ) == PackageManager.PERMISSION_GRANTED
 
-                                        if (hasGps) {
-                                            callback?.invoke(origin, true, false)
-                                        } else {
+                                        if (!hasGpsPermission) {
                                             activity.pendingGeolocationOrigin = origin
                                             activity.pendingGeolocationCallback = callback
                                             androidx.core.app.ActivityCompat.requestPermissions(
@@ -480,6 +549,16 @@ fun MainScreen(activity: MainActivity) {
                                                 ),
                                                 1002
                                             )
+                                        } else {
+                                            val lm = activity.getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager
+                                            val isGpsEnabled = lm?.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) == true ||
+                                                               lm?.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) == true
+
+                                            if (isGpsEnabled) {
+                                                callback?.invoke(origin, true, false)
+                                            } else {
+                                                showGpsSettingsDialog(activity, origin, callback)
+                                            }
                                         }
                                     }
 
@@ -1070,16 +1149,27 @@ fun DiagnosticsBottomSheet(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         modifier = Modifier.fillMaxWidth()
                     ) {
+                        val hasGpsPerm = ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                        val lm = context.getSystemService(Context.LOCATION_SERVICE) as? android.location.LocationManager
+                        val isGpsActive = lm?.isProviderEnabled(android.location.LocationManager.GPS_PROVIDER) == true ||
+                                          lm?.isProviderEnabled(android.location.LocationManager.NETWORK_PROVIDER) == true
+                        
+                        val (statusText, statusColor) = when {
+                            !hasGpsPerm -> "IZIN DITOLAK ❌" to MaterialTheme.colorScheme.error
+                            !isGpsActive -> "GPS NONAKTIF ⚠️" to Color(0xFFF39C12) // Dark Amber
+                            else -> "AKTIF & DISETUJUI ✅" to Color(0xFF10B981) // Bright Emerald
+                        }
+
                         Text(
                             text = "Akses GPS Perangkat:",
                             fontSize = 12.sp,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                         )
                         Text(
-                            text = "AKTIF & DISETUJUI ✅",
+                            text = statusText,
                             fontWeight = FontWeight.Bold,
                             fontSize = 12.sp,
-                            color = Color(0xFF10B981)
+                            color = statusColor
                         )
                     }
                 }
