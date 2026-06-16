@@ -24,10 +24,14 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.ArrowForward
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.Refresh
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.Warning
+import androidx.compose.material.icons.filled.LocationOn
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -48,13 +52,19 @@ import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.core.FastOutSlowInEasing
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.alpha
 import com.example.ui.theme.MyApplicationTheme
-import android.provider.Settings
+import android.provider.Settings as AndroidSettings
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
+import androidx.core.view.WindowInsetsControllerCompat
 
 class MainActivity : ComponentActivity() {
 
@@ -69,6 +79,17 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        
+        // Setup sticky immersive fullscreen mode to hide status bars and navigation bars completely
+        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
+        windowInsetsController.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+        windowInsetsController.hide(WindowInsetsCompat.Type.systemBars())
+        
+        // Render behind cutout/notch area for zero cut-off screen display
+        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.P) {
+            window.attributes.layoutInDisplayCutoutMode = android.view.WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES
+        }
+
         setContent {
             MyApplicationTheme {
                 MainScreen(this)
@@ -106,6 +127,7 @@ class MainActivity : ComponentActivity() {
 fun MainScreen(activity: MainActivity) {
     var showSplashScreen by remember { mutableStateOf(true) }
     val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
 
     val requiredPermissions = remember {
         arrayOf(
@@ -134,6 +156,14 @@ fun MainScreen(activity: MainActivity) {
                 if (allGranted) {
                     permissionsGranted = true
                 }
+                
+                // Reapply immersive fullscreen mode when app resumes
+                val window = (context as? Activity)?.window
+                if (window != null) {
+                    val controller = WindowCompat.getInsetsController(window, window.decorView)
+                    controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
+                    controller.hide(WindowInsetsCompat.Type.systemBars())
+                }
             }
         }
         lifecycleOwner.lifecycle.addObserver(observer)
@@ -144,7 +174,70 @@ fun MainScreen(activity: MainActivity) {
 
     var webViewInstance by remember { mutableStateOf<WebView?>(null) }
     var isLoading by remember { mutableStateOf(false) }
+    var webProgress by remember { mutableStateOf(0f) }
     var canGoBack by remember { mutableStateOf(false) }
+    var canGoForward by remember { mutableStateOf(false) }
+
+    // Advanced dynamic options
+    var isDesktopMode by remember { mutableStateOf(false) }
+    var isDiagnosticsOpen by remember { mutableStateOf(false) }
+
+    // Connection diagnostics ping details
+    var pingResult by remember { mutableStateOf<String?>("Belum diuji") }
+    var isPinging by remember { mutableStateOf(false) }
+
+    val runPingTest: suspend () -> Unit = {
+        isPinging = true
+        pingResult = "Mengukur..."
+        val startTime = System.currentTimeMillis()
+        try {
+            withContext(Dispatchers.IO) {
+                val urlConnection = java.net.URL("https://www.google.com").openConnection() as java.net.HttpURLConnection
+                urlConnection.connectTimeout = 3000
+                urlConnection.readTimeout = 3000
+                urlConnection.connect()
+                val code = urlConnection.responseCode
+                val endTime = System.currentTimeMillis()
+                if (code in 200..399) {
+                    pingResult = "Normal (${endTime - startTime} ms)"
+                } else {
+                    pingResult = "Eror $code (${endTime - startTime} ms)"
+                }
+            }
+        } catch (e: Exception) {
+            pingResult = "Terputus / Lambat"
+        } finally {
+            isPinging = false
+        }
+    }
+
+    // Trigger speed test when panel activates
+    LaunchedEffect(isDiagnosticsOpen) {
+        if (isDiagnosticsOpen) {
+            runPingTest()
+        }
+    }
+
+    // Error recovery states
+    var isCustomErrorActive by remember { mutableStateOf(false) }
+    var lastErrorCode by remember { mutableStateOf(0) }
+    var lastErrorDescription by remember { mutableStateOf("") }
+    var lastFailingUrl by remember { mutableStateOf("") }
+
+    // Desktop/Mobile dynamic user-agent trigger
+    LaunchedEffect(isDesktopMode) {
+        webViewInstance?.let { webView ->
+            val settings = webView.settings
+            if (isDesktopMode) {
+                settings.userAgentString = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+            } else {
+                settings.userAgentString = null
+            }
+            webView.reload()
+        }
+    }
+
+    val snackbarHostState = remember { SnackbarHostState() }
 
     // Setup input file chooser contract launcher
     val fileChooserLauncher = rememberLauncherForActivityResult(
@@ -198,72 +291,37 @@ fun MainScreen(activity: MainActivity) {
                 }
             )
         } else {
-            Scaffold(
-                topBar = {
-                    Column(modifier = Modifier.fillMaxWidth()) {
-                        TopAppBar(
-                            title = {
-                                Column {
-                                    Text(
-                                        text = "SMKPP Negeri Bima",
-                                        fontWeight = FontWeight.Bold,
-                                        fontSize = 18.sp,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                    Text(
-                                        text = "Portal Jurnal & Presensi",
-                                        fontSize = 11.sp,
-                                        color = MaterialTheme.colorScheme.onPrimaryContainer.copy(alpha = 0.7f)
-                                    )
-                                }
-                            },
-                            navigationIcon = {
-                                if (canGoBack) {
-                                    IconButton(onClick = { webViewInstance?.goBack() }) {
-                                        Icon(
-                                            imageVector = Icons.Default.ArrowBack,
-                                            contentDescription = "Kembali",
-                                            tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                        )
-                                    }
-                                }
-                            },
-                            actions = {
-                                IconButton(onClick = { webViewInstance?.loadUrl("https://jurnnall.web.app/") }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Home,
-                                        contentDescription = "Beranda",
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                                IconButton(onClick = { webViewInstance?.reload() }) {
-                                    Icon(
-                                        imageVector = Icons.Default.Refresh,
-                                        contentDescription = "Muat Ulang",
-                                        tint = MaterialTheme.colorScheme.onPrimaryContainer
-                                    )
-                                }
-                            },
-                            colors = TopAppBarDefaults.topAppBarColors(
-                                containerColor = MaterialTheme.colorScheme.primaryContainer
-                            )
-                        )
-                        if (isLoading) {
-                            LinearProgressIndicator(
-                                modifier = Modifier.fillMaxWidth(),
-                                color = MaterialTheme.colorScheme.primary,
-                                trackColor = MaterialTheme.colorScheme.primaryContainer
-                            )
+            // Screen Box layout with absolute fill size and zero spacing restrictions to guarantee no cut-offs
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(MaterialTheme.colorScheme.background)
+            ) {
+                if (isCustomErrorActive) {
+                    ConnectionErrorScreen(
+                        lastErrorDescription = lastErrorDescription,
+                        lastFailingUrl = lastFailingUrl,
+                        onRetryRequested = {
+                            isCustomErrorActive = false
+                            isLoading = true
+                            webViewInstance?.let { webView ->
+                                webView.settings.cacheMode = WebSettings.LOAD_DEFAULT
+                                webView.reload()
+                                // restore LOAD_CACHE_ELSE_NETWORK shortly after
+                                webView.postDelayed({
+                                    webView.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                                }, 4000)
+                            }
+                        },
+                        onLoadLocalCache = {
+                            isCustomErrorActive = false
+                            webViewInstance?.let { webView ->
+                                webView.settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                                webView.reload()
+                            }
                         }
-                    }
-                },
-                modifier = Modifier.fillMaxSize()
-            ) { paddingValues ->
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(paddingValues)
-                ) {
+                    )
+                } else {
                     AndroidView(
                         factory = { ctx ->
                             WebView(ctx).apply {
@@ -289,13 +347,21 @@ fun MainScreen(activity: MainActivity) {
                                 settings.builtInZoomControls = true
                                 settings.displayZoomControls = false
 
+                                // Cookie configuration - Crucial for Google Apps Script third-party frame states
+                                val cookieManager = CookieManager.getInstance()
+                                cookieManager.setAcceptCookie(true)
+                                try {
+                                    cookieManager.setAcceptThirdPartyCookies(this, true)
+                                } catch (e: Exception) {
+                                    // fine if not supported
+                                }
+
                                 webViewClient = object : WebViewClient() {
                                     override fun shouldOverrideUrlLoading(
                                         view: WebView?,
                                         request: WebResourceRequest?
                                     ): Boolean {
                                         val url = request?.url?.toString() ?: ""
-                                        // Open standard external schemas in separate intent handlers (e.g. WA links, mail, etc.)
                                         return if (url.startsWith("http://") || url.startsWith("https://")) {
                                             false // Load within our webview
                                         } else {
@@ -311,17 +377,40 @@ fun MainScreen(activity: MainActivity) {
 
                                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                         isLoading = true
+                                        isCustomErrorActive = false
                                         super.onPageStarted(view, url, favicon)
                                     }
 
                                     override fun onPageFinished(view: WebView?, url: String?) {
                                         isLoading = false
                                         canGoBack = view?.canGoBack() ?: false
+                                        canGoForward = view?.canGoForward() ?: false
                                         super.onPageFinished(view, url)
+                                    }
+
+                                    override fun onReceivedError(
+                                        view: WebView?,
+                                        request: WebResourceRequest?,
+                                        error: WebResourceError?
+                                    ) {
+                                        super.onReceivedError(view, request, error)
+                                        // Handle main frame loading error natively
+                                        if (request?.isForMainFrame == true) {
+                                            lastErrorCode = error?.errorCode ?: -1
+                                            lastErrorDescription = error?.description?.toString() ?: "Masalah koneksi"
+                                            lastFailingUrl = request.url?.toString() ?: ""
+                                            isCustomErrorActive = true
+                                        }
                                     }
                                 }
 
                                 webChromeClient = object : WebChromeClient() {
+                                    override fun onProgressChanged(view: WebView?, newProgress: Int) {
+                                        super.onProgressChanged(view, newProgress)
+                                        webProgress = newProgress / 100f
+                                        isLoading = newProgress < 100
+                                    }
+
                                     override fun onGeolocationPermissionsShowPrompt(
                                         origin: String?,
                                         callback: GeolocationPermissions.Callback?
@@ -355,16 +444,16 @@ fun MainScreen(activity: MainActivity) {
                                                 activity, Manifest.permission.CAMERA
                                             ) == PackageManager.PERMISSION_GRANTED
 
-                                             if (hasCamera) {
-                                                 request?.grant(resources)
-                                             } else {
-                                                 activity.pendingPermissionRequest = request
-                                                 androidx.core.app.ActivityCompat.requestPermissions(
-                                                     activity,
-                                                     arrayOf(Manifest.permission.CAMERA),
-                                                     1003
-                                                 )
-                                             }
+                                            if (hasCamera) {
+                                                request?.grant(resources)
+                                            } else {
+                                                activity.pendingPermissionRequest = request
+                                                androidx.core.app.ActivityCompat.requestPermissions(
+                                                    activity,
+                                                    arrayOf(Manifest.permission.CAMERA),
+                                                    1003
+                                                )
+                                            }
                                         } else {
                                             request?.grant(resources)
                                         }
@@ -403,6 +492,548 @@ fun MainScreen(activity: MainActivity) {
                         },
                         modifier = Modifier.fillMaxSize()
                     )
+                }
+
+                // Ambient progress line at the very top of the screen
+                if (isLoading) {
+                    LinearProgressIndicator(
+                        progress = { webProgress },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(3.dp)
+                            .align(Alignment.TopCenter),
+                        color = MaterialTheme.colorScheme.primary,
+                        trackColor = Color.Transparent
+                    )
+                }
+
+                // Custom bottom snackbar host to display background updates or issues gently
+                SnackbarHost(
+                    hostState = snackbarHostState,
+                    modifier = Modifier.align(Alignment.BottomCenter)
+                )
+            }
+        }
+    }
+
+    if (isDiagnosticsOpen) {
+        DiagnosticsBottomSheet(
+            onDismissRequest = { isDiagnosticsOpen = false },
+            isDesktopMode = isDesktopMode,
+            onDesktopModeChanged = { isDesktopMode = it },
+            pingResult = pingResult,
+            isPinging = isPinging,
+            onTriggerPing = {
+                coroutineScope.launch {
+                    runPingTest()
+                }
+            },
+            onClearCacheRequested = {
+                webViewInstance?.let { webView ->
+                    webView.clearCache(true)
+                    webView.clearHistory()
+                    val cookieManager = CookieManager.getInstance()
+                    cookieManager.removeAllCookies {
+                        coroutineScope.launch {
+                            snackbarHostState.showSnackbar("Cache & cookie berhasil dibersihkan! Memuat ulang portal...")
+                            webView.reload()
+                        }
+                    }
+                }
+                isDiagnosticsOpen = false
+            },
+            context = context,
+            canGoBack = canGoBack,
+            canGoForward = canGoForward,
+            onGoBack = { 
+                webViewInstance?.goBack()
+                isDiagnosticsOpen = false
+            },
+            onGoForward = { 
+                webViewInstance?.goForward()
+                isDiagnosticsOpen = false
+            },
+            onGoHome = { 
+                isCustomErrorActive = false
+                webViewInstance?.loadUrl("https://jurnnall.web.app/")
+                isDiagnosticsOpen = false
+            },
+            onReload = { 
+                isCustomErrorActive = false
+                webViewInstance?.reload()
+                isDiagnosticsOpen = false
+            }
+        )
+    }
+}
+
+@Composable
+fun ConnectionErrorScreen(
+    lastErrorDescription: String,
+    lastFailingUrl: String,
+    onRetryRequested: () -> Unit,
+    onLoadLocalCache: () -> Unit
+) {
+    Box(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(MaterialTheme.colorScheme.background)
+            .padding(24.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            modifier = Modifier
+                .widthIn(max = 500.dp)
+                .fillMaxWidth()
+                .verticalScroll(rememberScrollState()),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Box(
+                modifier = Modifier
+                    .size(90.dp)
+                    .clip(RoundedCornerShape(24.dp))
+                    .background(MaterialTheme.colorScheme.errorContainer)
+                    .padding(16.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Warning,
+                    contentDescription = "Peringatan Koneksi",
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(50.dp)
+                )
+            }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text(
+                text = "Koneksi Terputus atau Lemah",
+                fontWeight = FontWeight.Bold,
+                fontSize = 22.sp,
+                color = MaterialTheme.colorScheme.onBackground,
+                textAlign = TextAlign.Center
+            )
+
+            Spacer(modifier = Modifier.height(10.dp))
+
+            Text(
+                text = "Portal Jurnal tidak dapat dimuat karena koneksi internet di sekolah sedang kurang stabil.",
+                color = MaterialTheme.colorScheme.onBackground.copy(alpha = 0.7f),
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+                lineHeight = 20.sp
+            )
+
+            Spacer(modifier = Modifier.height(20.dp))
+
+            // Diagnostic Info Card
+            Card(
+                modifier = Modifier.fillMaxWidth(),
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f)
+                ),
+                shape = RoundedCornerShape(16.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Detail Teknis:",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 13.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        text = "Pesan: $lastErrorDescription",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f)
+                    )
+                    Text(
+                        text = "URL: $lastFailingUrl",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.6f),
+                        maxLines = 2
+                    )
+                }
+            }
+
+            Spacer(modifier = Modifier.height(30.dp))
+
+            Button(
+                onClick = onRetryRequested,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary
+                ),
+                shape = RoundedCornerShape(26.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Refresh,
+                    contentDescription = "Muat Ulang",
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Muat Ulang Halaman (Coba Lagi)",
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp
+                )
+            }
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            OutlinedButton(
+                onClick = onLoadLocalCache,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(52.dp),
+                shape = RoundedCornerShape(26.dp),
+                colors = ButtonDefaults.outlinedButtonColors(
+                    contentColor = MaterialTheme.colorScheme.secondary
+                )
+            ) {
+                Icon(
+                    imageVector = Icons.Default.Info,
+                    contentDescription = "Gunakan Cache Offline",
+                    modifier = Modifier.size(20.dp)
+                )
+                Spacer(modifier = Modifier.width(8.dp))
+                Text(
+                    text = "Gunakan Cadangan Cache (Offline)",
+                    fontWeight = FontWeight.SemiBold,
+                    fontSize = 14.sp
+                )
+            }
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun DiagnosticsBottomSheet(
+    onDismissRequest: () -> Unit,
+    isDesktopMode: Boolean,
+    onDesktopModeChanged: (Boolean) -> Unit,
+    pingResult: String?,
+    isPinging: Boolean,
+    onTriggerPing: () -> Unit,
+    onClearCacheRequested: () -> Unit,
+    context: Context,
+    canGoBack: Boolean,
+    canGoForward: Boolean,
+    onGoBack: () -> Unit,
+    onGoForward: () -> Unit,
+    onGoHome: () -> Unit,
+    onReload: () -> Unit
+) {
+    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+
+    ModalBottomSheet(
+        onDismissRequest = onDismissRequest,
+        sheetState = sheetState,
+        dragHandle = { BottomSheetDefaults.DragHandle() },
+        containerColor = MaterialTheme.colorScheme.surface,
+        contentColor = MaterialTheme.colorScheme.onSurface
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(horizontal = 24.dp)
+                .padding(bottom = 44.dp)
+                .verticalScroll(rememberScrollState()),
+            verticalArrangement = Arrangement.spacedBy(20.dp)
+        ) {
+            // Header
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Column {
+                    Text(
+                        text = "Pusat Diagnostik & Pengaturan",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 19.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Text(
+                        text = "Validasi fungsionalitas sistem & setelan web",
+                        fontSize = 12.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                }
+            }
+
+            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f))
+
+            // Quick Navigation Control Card (replacing bottom bar buttons)
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.25f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Text(
+                        text = "Navigasi Cepat Portal",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp,
+                        color = MaterialTheme.colorScheme.primary
+                    )
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(
+                            onClick = onGoBack,
+                            enabled = canGoBack,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                            )
+                        ) {
+                            Icon(Icons.Default.ArrowBack, contentDescription = "Sebelumnya")
+                        }
+                        IconButton(
+                            onClick = onGoForward,
+                            enabled = canGoForward,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer,
+                                disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
+                            )
+                        ) {
+                            Icon(Icons.Default.ArrowForward, contentDescription = "Sesudahnya")
+                        }
+                        IconButton(
+                            onClick = onGoHome,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
+                            Icon(Icons.Default.Home, contentDescription = "Beranda")
+                        }
+                        IconButton(
+                            onClick = onReload,
+                            colors = IconButtonDefaults.iconButtonColors(
+                                contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        ) {
+                            Icon(Icons.Default.Refresh, contentDescription = "Muat Ulang")
+                        }
+                    }
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
+                    ) {
+                        Text("Kembali", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = if (canGoBack) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                        Text("Maju", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = if (canGoForward) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f))
+                        Text("Beranda", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                        Text("Refresh", fontSize = 11.sp, fontWeight = FontWeight.SemiBold, color = MaterialTheme.colorScheme.primary)
+                    }
+                }
+            }
+
+            // 1. Connection Ping Section
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(10.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Ping Respon",
+                                tint = MaterialTheme.colorScheme.secondary,
+                                modifier = Modifier.size(22.dp)
+                            )
+                            Text(
+                                text = "Kecepatan Respon Sekolah",
+                                fontWeight = FontWeight.Bold,
+                                fontSize = 14.sp
+                            )
+                        }
+                        IconButton(
+                            onClick = onTriggerPing,
+                            enabled = !isPinging,
+                            modifier = Modifier.size(32.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Default.Refresh,
+                                contentDescription = "Cek Ulang",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Status Koneksi (Ke Google):",
+                            fontSize = 13.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = pingResult ?: "Belum dicek",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 13.sp,
+                            color = if (pingResult?.contains("Normal") == true) Color(0xFF10B981) else MaterialTheme.colorScheme.error
+                        )
+                    }
+                }
+            }
+
+            // 2. Desktop Mode Toggle
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Column(modifier = Modifier.weight(1f)) {
+                        Text(
+                            text = "Tampilan Desktop (PC)",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                        Text(
+                            text = "Aktifkan apabila tampilan portal terpotong pada layar HP",
+                            fontSize = 11.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            lineHeight = 15.sp
+                        )
+                    }
+                    Switch(
+                        checked = isDesktopMode,
+                        onCheckedChange = onDesktopModeChanged,
+                        modifier = Modifier.padding(start = 12.dp)
+                    )
+                }
+            }
+
+            // 3. Clear Cache/History/Reset
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        text = "Setel Ulang Data Berselancar",
+                        fontWeight = FontWeight.Bold,
+                        fontSize = 14.sp
+                    )
+                    Text(
+                        text = "Membersihkan cache lokal & cookie apabila terjadi error pemuatan atau portal hang",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        lineHeight = 15.sp
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Button(
+                        onClick = onClearCacheRequested,
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.errorContainer,
+                            contentColor = MaterialTheme.colorScheme.onErrorContainer
+                        ),
+                        shape = RoundedCornerShape(8.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Bersihkan Cache & Reset Sesi",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold
+                        )
+                    }
+                }
+            }
+
+            // 4. GPS Native Status Panel
+            Card(
+                colors = CardDefaults.cardColors(
+                    containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
+                ),
+                shape = RoundedCornerShape(12.dp)
+            ) {
+                Column(
+                    modifier = Modifier.padding(16.dp),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Default.LocationOn,
+                            contentDescription = "Sensor GPS",
+                            tint = Color(0xFF10B981),
+                            modifier = Modifier.size(20.dp)
+                        )
+                        Text(
+                            text = "Sensor Geolokasi & Keamanan",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 14.sp
+                        )
+                    }
+                    Text(
+                        text = "Sistem presensi memerlukan verifikasi koordinat sah.",
+                        fontSize = 11.sp,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                    Row(
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = "Akses GPS Perangkat:",
+                            fontSize = 12.sp,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
+                        )
+                        Text(
+                            text = "AKTIF & DISETUJUI ✅",
+                            fontWeight = FontWeight.Bold,
+                            fontSize = 12.sp,
+                            color = Color(0xFF10B981)
+                        )
+                    }
                 }
             }
         }
@@ -608,13 +1239,13 @@ fun PermissionOnboardingScreen(
                         Button(
                             onClick = {
                                 try {
-                                    val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
+                                    val intent = Intent(AndroidSettings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
                                         data = Uri.fromParts("package", context.packageName, null)
                                     }
                                     context.startActivity(intent)
                                 } catch (e: Exception) {
                                     try {
-                                        context.startActivity(Intent(Settings.ACTION_SETTINGS))
+                                        context.startActivity(Intent(AndroidSettings.ACTION_SETTINGS))
                                     } catch (ex: Exception) {}
                                 }
                             },
