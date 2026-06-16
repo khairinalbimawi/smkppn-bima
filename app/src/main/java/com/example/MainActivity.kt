@@ -65,6 +65,12 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import android.app.DownloadManager
+import android.os.Environment
+import android.webkit.URLUtil
+import android.widget.Toast
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ArrowForward
 
 class MainActivity : ComponentActivity() {
 
@@ -97,6 +103,7 @@ class MainActivity : ComponentActivity() {
         }
     }
 
+    @Suppress("DEPRECATION")
     override fun onRequestPermissionsResult(
         requestCode: Int,
         permissions: Array<String>,
@@ -121,8 +128,19 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+// Robust activity context resolver extension
+fun Context.findActivity(): Activity? {
+    var ctx = this
+    while (ctx is android.content.ContextWrapper) {
+        if (ctx is Activity) return ctx
+        ctx = ctx.baseContext
+    }
+    return null
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @SuppressLint("SetJavaScriptEnabled")
+@Suppress("DEPRECATION")
 @Composable
 fun MainScreen(activity: MainActivity) {
     var showSplashScreen by remember { mutableStateOf(true) }
@@ -158,7 +176,7 @@ fun MainScreen(activity: MainActivity) {
                 }
                 
                 // Reapply immersive fullscreen mode when app resumes
-                val window = (context as? Activity)?.window
+                val window = context.findActivity()?.window
                 if (window != null) {
                     val controller = WindowCompat.getInsetsController(window, window.decorView)
                     controller.systemBarsBehavior = WindowInsetsControllerCompat.BEHAVIOR_SHOW_TRANSIENT_BARS_BY_SWIPE
@@ -339,6 +357,36 @@ fun MainScreen(activity: MainActivity) {
                                 settings.allowContentAccess = true
                                 settings.mediaPlaybackRequiresUserGesture = false
                                 settings.cacheMode = WebSettings.LOAD_CACHE_ELSE_NETWORK
+                                settings.mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+
+                                // Enable downloads within our web portal
+                                setDownloadListener { url, userAgent, contentDisposition, mimetype, _ ->
+                                    try {
+                                        val request = DownloadManager.Request(Uri.parse(url)).apply {
+                                            setMimeType(mimetype)
+                                            val cookies = CookieManager.getInstance().getCookie(url)
+                                            addRequestHeader("cookie", cookies)
+                                            addRequestHeader("User-Agent", userAgent)
+                                            setDescription("Mengunduh berkas Jurnal...")
+                                            setTitle(URLUtil.guessFileName(url, contentDisposition, mimetype))
+                                            setNotificationVisibility(DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED)
+                                            setDestinationInExternalPublicDir(
+                                                Environment.DIRECTORY_DOWNLOADS,
+                                                URLUtil.guessFileName(url, contentDisposition, mimetype)
+                                            )
+                                        }
+                                        val dm = ctx.getSystemService(Context.DOWNLOAD_SERVICE) as DownloadManager
+                                        dm.enqueue(request)
+                                        Toast.makeText(ctx, "Mengunduh berkas...", Toast.LENGTH_SHORT).show()
+                                    } catch (e: Exception) {
+                                        try {
+                                            val intent = Intent(Intent.ACTION_VIEW, Uri.parse(url))
+                                            ctx.startActivity(intent)
+                                        } catch (ex: Exception) {
+                                            Toast.makeText(ctx, "Gagal mengunduh: ${e.localizedMessage}", Toast.LENGTH_LONG).show()
+                                        }
+                                    }
+                                }
 
                                 // Viewports & responsiveness
                                 settings.useWideViewPort = true
@@ -801,7 +849,7 @@ fun DiagnosticsBottomSheet(
                                 disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
                             )
                         ) {
-                            Icon(Icons.Default.ArrowBack, contentDescription = "Sebelumnya")
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Sebelumnya")
                         }
                         IconButton(
                             onClick = onGoForward,
@@ -811,7 +859,7 @@ fun DiagnosticsBottomSheet(
                                 disabledContentColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
                             )
                         ) {
-                            Icon(Icons.Default.ArrowForward, contentDescription = "Sesudahnya")
+                            Icon(Icons.AutoMirrored.Filled.ArrowForward, contentDescription = "Sesudahnya")
                         }
                         IconButton(
                             onClick = onGoHome,
