@@ -610,7 +610,7 @@ fun MainScreen(activity: MainActivity) {
                                     }
                                 }
 
-                                loadUrl("https://jurnnall.web.app/")
+                                loadUrl("https://sipegawaismkpp.web.app/")
                                 webViewInstance = this
                             }
                         },
@@ -682,7 +682,7 @@ fun MainScreen(activity: MainActivity) {
             },
             onGoHome = { 
                 isCustomErrorActive = false
-                webViewInstance?.loadUrl("https://jurnnall.web.app/")
+                webViewInstance?.loadUrl("https://sipegawaismkpp.web.app/")
                 isDiagnosticsOpen = false
             },
             onReload = { 
@@ -1251,10 +1251,10 @@ fun PermissionOnboardingScreen(
             Spacer(modifier = Modifier.height(24.dp))
 
             Text(
-                text = "SMKPP Negeri Bima",
+                text = "TU KOMBAT",
                 color = Color.White,
                 fontWeight = FontWeight.Bold,
-                fontSize = 26.sp,
+                fontSize = 28.sp,
                 textAlign = TextAlign.Center
             )
 
@@ -1541,9 +1541,10 @@ fun SplashScreen(onSplashFinished: () -> Unit) {
             Spacer(modifier = Modifier.height(20.dp))
 
             Text(
-                text = "Sistem Informasi & Absensi Digital",
-                color = Color.White.copy(alpha = 0.55f),
-                fontSize = 13.sp,
+                text = "TU KOMBAT - Portal Jurnal & Absensi",
+                color = Color.White.copy(alpha = 0.65f),
+                fontWeight = FontWeight.Bold,
+                fontSize = 14.sp,
                 textAlign = TextAlign.Center,
                 modifier = Modifier.alpha(alpha)
             )
